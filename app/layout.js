@@ -12,6 +12,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="ko">
+      <link rel="manifest" href="/manifest.json" />
       <SettingsProvider>
         <body className={inter.className} suppressHydrationWarning={true}>{children}</body>
       </SettingsProvider>
