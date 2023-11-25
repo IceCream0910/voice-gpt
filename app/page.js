@@ -2,102 +2,40 @@
 import React, { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './page.module.css';
-import SpeechRecognition from './components/stt';
+import SpeechRecognitionComponent from './components/stt';
+import { SettingsProvider } from './settings/SettingsContext';
+import { useSettings } from './settings/SettingsContext';
+import Link from 'next/link';
+import IonIcon from '@reacticons/ionicons';
+import '@material/web/icon/icon.js';
+import '@material/web/iconbutton/filled-icon-button.js';
+import '@material/web/iconbutton/filled-tonal-icon-button.js';
+import '@material/web/iconbutton/outlined-icon-button.js';
+import '@material/web/iconbutton/icon-button.js';
+import '@material/web/button/text-button.js';
 
 const Home = React.forwardRef((props, ref) => {
-  const [sttResult, setSttResult] = useState('');
+  const { gpt4Enabled, naturalVoiceEnabled, guidePrompt, updateGuidePrompt } = useSettings();
   const [messages, setMessages] = useState([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly." }]);
-  const [answer, setAnswer] = useState('');
-  const [isSpeaking, setIsSpeaking] = useState(false);
 
   const STT = useRef();
   const audio = useRef();
 
+  useEffect(() => {
+    console.log('gpt4Enabled, naturalVoiceEnabled:', gpt4Enabled, naturalVoiceEnabled);
+  }, [gpt4Enabled, naturalVoiceEnabled])
+
   const onSpeechRecognitionResult = (result) => {
     if (result) {
-      setSttResult(result);
       send([...messages, { role: "user", content: result }]);
       setMessages([...messages, { role: "user", content: result }]);
     }
-
   }
 
-  const gptType = '3.5' // '4' or '3.5'
   async function send(msgs) {
     console.log(msgs);
-    setAnswer('')
 
-    if (gptType === '3.5') {
-      fetch("https://ai.fakeopen.com/v1/chat/completions", {
-        //GPT3.5
-        method: "POST",
-        headers: {
-          Authorization: "Bearer pk-this-is-a-real-free-pool-token-for-everyone",
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          messages: msgs,
-          model: "gpt-4",
-          max_tokens: 1024,
-          temperature: 0.7,
-          top_p: 1,
-          stream: true,
-        }),
-      })
-        .then((response) => {
-          if (!response.body) {
-            throw new Error("Response body is null");
-          }
-          const reader = response.body.getReader();
-          const decoder = new TextDecoder();
-
-          async function readChunks() {
-            let result = await reader.read();
-            var resultMsg = "";
-            let partialSentence = '';
-
-            while (!result.done) {
-              const data = decoder.decode(result.value, {
-                stream: true,
-              });
-              const parsedData = data
-                .replaceAll("data: ", "")
-                .trim()
-                .split("\n");
-              let lastSentence = '';
-              parsedData.forEach((item) => {
-                if (data && isJson(item)) {
-                  if (
-                    JSON.parse(item).choices &&
-                    JSON.parse(item).choices[0].delta &&
-                    JSON.parse(item).choices[0].delta.content
-                  ) {
-                    const newContent = JSON.parse(item).choices[0].delta.content;
-                    resultMsg += newContent;
-                    partialSentence += newContent;
-
-                    let sentenceCount = (partialSentence.match(/[.!?]/g) || []).length;
-                    if (sentenceCount >= 2) {
-                      TTS(partialSentence.trim());
-                      partialSentence = '';
-                    }
-                    setAnswer(resultMsg)
-                  }
-                }
-              });
-              result = await reader.read();
-            }
-            //done
-            setMessages([...messages, { role: "assistant", content: resultMsg }]);
-          }
-          readChunks();
-        })
-        .catch((error) => {
-          console.error(error);
-          TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
-        })
-    } else if (gptType === '4') {
-
+    if (gpt4Enabled) {
       fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -107,15 +45,20 @@ const Home = React.forwardRef((props, ref) => {
         body: JSON.stringify({
           messages: msgs,
           model: "gpt-4-1106-preview",
-          max_tokens: 1024,
-          temperature: 0.6,
+          max_tokens: 512,
+          temperature: 0.7,
           top_p: 1,
           stream: true,
         }),
       })
         .then((response) => {
           if (!response.body) {
-            throw new Error("Response body is null");
+            console.error("Response body is null");
+            TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
+          }
+          if (!response.ok) {
+            console.error("response is not ok");
+            TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
           }
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
@@ -150,7 +93,79 @@ const Home = React.forwardRef((props, ref) => {
                       TTS(partialSentence.trim());
                       partialSentence = '';
                     }
-                    setAnswer(resultMsg)
+                  }
+                }
+              });
+              result = await reader.read();
+            }
+            //done
+            setMessages([...messages, { role: "assistant", content: resultMsg }]);
+          }
+          readChunks();
+        })
+        .catch((error) => {
+          console.error(error);
+          TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
+        })
+    } else {
+      fetch("https://ai.fakeopen.com/v1/chat/completions", {
+        //GPT3.5
+        method: "POST",
+        headers: {
+          Authorization: "Bearer pk-this-is-a-real-free-pool-token-for-everyone",
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          messages: msgs,
+          model: "gpt-3.5-turbo-1106",
+          max_tokens: 512,
+          temperature: 0.7,
+          top_p: 1,
+          stream: true,
+        }),
+      })
+        .then((response) => {
+          if (!response.body) {
+            console.error("Response body is null");
+            TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
+          }
+          if (!response.ok) {
+            console.error("response is not ok");
+            TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
+          }
+          const reader = response.body.getReader();
+          const decoder = new TextDecoder();
+
+          async function readChunks() {
+            let result = await reader.read();
+            var resultMsg = "";
+            let partialSentence = '';
+
+            while (!result.done) {
+              const data = decoder.decode(result.value, {
+                stream: true,
+              });
+              const parsedData = data
+                .replaceAll("data: ", "")
+                .trim()
+                .split("\n");
+              let lastSentence = '';
+              parsedData.forEach((item) => {
+                if (data && isJson(item)) {
+                  if (
+                    JSON.parse(item).choices &&
+                    JSON.parse(item).choices[0].delta &&
+                    JSON.parse(item).choices[0].delta.content
+                  ) {
+                    const newContent = JSON.parse(item).choices[0].delta.content;
+                    resultMsg += newContent;
+                    partialSentence += newContent;
+
+                    let sentenceCount = (partialSentence.match(/[.!?]/g) || []).length;
+                    if (sentenceCount >= 1) {
+                      TTS(partialSentence.trim());
+                      partialSentence = '';
+                    }
                   }
                 }
               });
@@ -181,20 +196,19 @@ const Home = React.forwardRef((props, ref) => {
   let isPlaying = false;
 
   async function TTS(text) {
-    console.log("tts:", text)
     if (text) {
       queue.push(text);
       playAudio();
     }
   }
 
-  const apiType = 'clova' // 'openai' or 'clova'
   async function playAudio() {
     if (!isPlaying && queue.length > 0) {
       isPlaying = true;
       var text = queue.shift();
       if (!text) text = '연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?';
-      if (apiType === 'openai') {
+      updateGuidePrompt(text);
+      if (naturalVoiceEnabled) {
         const response = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
           headers: {
@@ -212,8 +226,8 @@ const Home = React.forwardRef((props, ref) => {
         audio.current = new Audio(url);
         audio.current.play();
         audio.current.onended = onTTSEnd;
-      } else if (apiType === 'clova') {
-        const audio = new Audio(`https://playentry.org/api/expansionBlock/tts/read.mp3?text=${text}&speaker=dinna`);
+      } else {
+        const audio = new Audio(`https://playentry.org/api/expansionBlock/tts/read.mp3?text=${encodeURIComponent(text)}&speaker=dinna`);
         audio.play();
         audio.onended = onTTSEnd;
       }
@@ -225,15 +239,35 @@ const Home = React.forwardRef((props, ref) => {
     if (queue.length > 0) {
       playAudio();
     } else {
-      setAnswer('')
       STT.current.startListening()
     }
   }
 
+  function startNewConversation() {
+    setMessages([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly." }]);
+    STT.current.startListening();
+  }
+
   return (
-    <main className={styles.main}>
-      <SpeechRecognition onResult={onSpeechRecognitionResult} ref={STT} />
-    </main>
+    <>
+      <Link href="/settings" style={{ position: 'fixed', bottom: '40px', right: "20px" }}>
+        <md-icon-button>
+          <md-icon><IonIcon name='settings-outline' /></md-icon>
+        </md-icon-button>
+      </Link>
+
+      <div onClick={() => startNewConversation()} style={{ position: 'fixed', bottom: '45px', left: "20px" }}>
+        <md-text-button>
+          <IonIcon name='add-circle-outline' style={{ fontSize: '30px', position: 'relative', top: '10px' }} />&nbsp;
+          새 대화 시작
+        </md-text-button>
+      </div>
+
+      <main className={styles.main}>
+        <SpeechRecognitionComponent onResult={onSpeechRecognitionResult} ref={STT} />
+        <p style={{ textAlign: 'center', width: '90vw', marginBottom: '10px' }}>{guidePrompt}</p>
+      </main>
+    </>
   )
 });
 

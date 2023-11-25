@@ -1,37 +1,68 @@
-import { useState, useRef, forwardRef, useImperativeHandle } from 'react'
+import { useState, useRef, forwardRef, useImperativeHandle, useEffect } from 'react'
+import 'regenerator-runtime/runtime';
+import SpeechRecognition, { useSpeechRecognition } from 'react-speech-recognition'
+import { useSettings } from '../settings/SettingsContext';
 
-const SpeechRecognition = forwardRef(({ onResult }, ref) => {
-    const recognition = useRef(null);
-    const [isListening, setIsListening] = useState(false);
-    const tempResult = useRef(null);
+const SpeechRecognitionComponent = forwardRef(({ onResult }, ref) => {
+    const { guidePrompt, updateGuidePrompt } = useSettings();
+
+    const {
+        transcript,
+        listening,
+        resetTranscript,
+        finalTranscript,
+        browserSupportsSpeechRecognition
+    } = useSpeechRecognition();
+
+    useEffect(() => {
+        if (!browserSupportsSpeechRecognition) {
+            alert('지원되지 않는 브라우저입니다.');
+        }
+    }, []);
 
     const startListening = () => {
-        const tempRecognition = new window.webkitSpeechRecognition();
-        tempRecognition.continuous = true;
-        tempRecognition.interimResults = true;
-        tempRecognition.lang = 'ko-KR';
-        recognition.current = tempRecognition;
-        setIsListening(true);
-        tempRecognition.start();
-
-        tempRecognition.onresult = (event) => {
-            tempResult.current = event.results[0][0].transcript;
-            if (event.results[0].isFinal) {
-                tempRecognition.stop();
-                setIsListening(false);
-                onResult(event.results[0][0].transcript);
-                recognition.current = null;
-            }
-        };
+        SpeechRecognition.startListening({
+            continuous: false,
+            language: 'ko-KR',
+            interimResults: true
+        });
     };
+
+    useEffect(() => {
+        if (finalTranscript) {
+            onResult(finalTranscript);
+        } else {
+        }
+    }, [finalTranscript]);
 
     const stopListening = () => {
-        if (recognition.current) {
-            recognition.current.stop();
-            //onResult(tempResult.current);
-            setIsListening(false);
+        SpeechRecognition.stopListening();
+        if (finalTranscript) {
+            onResult(finalTranscript);
+            resetTranscript();
+        } else {
+            updateGuidePrompt('위 버튼을 눌러 말하기 시작');
         }
     };
+
+    useEffect(() => {
+        if (transcript.length > 0) {
+            updateGuidePrompt(transcript);
+        }
+    }, [transcript]);
+
+    useEffect(() => {
+        if (listening) {
+            updateGuidePrompt('듣는 중');
+        } else {
+            if (finalTranscript) {
+                updateGuidePrompt('생각하는 중');
+                resetTranscript();
+            } else {
+                updateGuidePrompt('위 버튼을 눌러 말하기 시작');
+            }
+        }
+    }, [listening]);
 
     useImperativeHandle(ref, () => ({
         startListening,
@@ -40,7 +71,7 @@ const SpeechRecognition = forwardRef(({ onResult }, ref) => {
 
     return (
         <>
-            <button className={`toggleRecognition ${isListening ? 'stop' : 'start'}`} onClick={isListening ? stopListening : startListening}>
+            <button className={`toggleRecognition ${listening ? 'stop' : 'start'}`} onClick={listening ? stopListening : startListening}>
                 <div className="leaf leaf1"></div>
                 <div className="leaf leaf2"></div>
                 <div className="leaf leaf3"></div>
@@ -50,4 +81,5 @@ const SpeechRecognition = forwardRef(({ onResult }, ref) => {
     );
 });
 
-export default SpeechRecognition;
+export default SpeechRecognitionComponent;
+
