@@ -309,7 +309,7 @@ const Home = React.forwardRef((props, ref) => {
 
           <md-outlined-button className="bottom-btn"
             onClick={() => { setWebcamImage(webcamRef.current.getScreenshot()), updateGuidePrompt('지금 보고 있는 것에 대해 이야기해보세요'), STT.current.startListening() }}
-            style={{ position: 'fixed', width: '55%', bottom: '90px', padding: '20px', boxSizing: 'border-box', height: '80px', transform: 'translateX(-50%)', left: '50%' }}
+            style={{ position: 'fixed', width: '60%', bottom: '90px', padding: '20px', boxSizing: 'border-box', height: '80px', transform: 'translateX(-50%)', left: '50%' }}
           >새로운 사진으로 대화</md-outlined-button>
         </>}
 
