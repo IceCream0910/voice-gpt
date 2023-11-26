@@ -301,6 +301,9 @@ const Home = React.forwardRef((props, ref) => {
       {(mode === 'camera' && canVision) &&
         <>
           <Webcam
+            videoConstraints={{
+              facingMode: { exact: "environment" }
+            }}
             ref={webcamRef}
             audio={false}
             screenshotFormat="image/jpeg"
