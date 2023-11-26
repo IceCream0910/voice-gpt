@@ -9,7 +9,7 @@ import '@material/web/switch/switch.js';
 import { useSettings } from './SettingsContext';
 
 const Settings = () => {
-    const { gpt4Enabled, toggleGpt4, naturalVoiceEnabled, toggleNaturalVoice } = useSettings();
+    const { gpt4Enabled, toggleGpt4, naturalVoiceEnabled, toggleNaturalVoice, freeGptEnabled, toggleFreeGpt } = useSettings();
 
     useEffect(() => {
         console.log(gpt4Enabled, naturalVoiceEnabled);
@@ -24,6 +24,10 @@ const Settings = () => {
                 <label style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
                     GPT-4 사용
                     <md-switch {...(gpt4Enabled ? { selected: true } : {})} onClick={toggleGpt4}></md-switch>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
+                    GPT-3.5는 무료 버전 사용(불안정)
+                    <md-switch {...(freeGptEnabled ? { selected: true } : {})} onClick={toggleFreeGpt}></md-switch>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'center', width: '100%', justifyContent: 'space-between' }}>
                     보다 자연스러운 음성 사용
