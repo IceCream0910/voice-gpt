@@ -16,7 +16,7 @@ import '@material/web/button/text-button.js';
 
 const Home = React.forwardRef((props, ref) => {
   const { gpt4Enabled, naturalVoiceEnabled, guidePrompt, updateGuidePrompt } = useSettings();
-  const [messages, setMessages] = useState([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly." }]);
+  const [messages, setMessages] = useState([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly. You can fix some typos of user input based on context." }]);
 
   const STT = useRef();
   const audio = useRef();
@@ -45,7 +45,7 @@ const Home = React.forwardRef((props, ref) => {
         body: JSON.stringify({
           messages: msgs,
           model: "gpt-4-1106-preview",
-          max_tokens: 512,
+          max_tokens: 128,
           temperature: 0.7,
           top_p: 1,
           stream: true,
@@ -108,17 +108,17 @@ const Home = React.forwardRef((props, ref) => {
           TTS('연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?');
         })
     } else {
-      fetch("https://ai.fakeopen.com/v1/chat/completions", {
+      fetch("https://api.openai.com/v1/chat/completions", {
         //GPT3.5
         method: "POST",
         headers: {
-          Authorization: "Bearer pk-this-is-a-real-free-pool-token-for-everyone",
+          Authorization: "Bearer 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",
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
           messages: msgs,
           model: "gpt-3.5-turbo-1106",
-          max_tokens: 512,
+          max_tokens: 128,
           temperature: 0.7,
           top_p: 1,
           stream: true,
@@ -194,20 +194,13 @@ const Home = React.forwardRef((props, ref) => {
 
   let queue = [];
   let isPlaying = false;
+  let audioCache = {};
+  let audioIndex = 0;
 
   async function TTS(text) {
     if (text) {
+      const index = queue.length;
       queue.push(text);
-      playAudio();
-    }
-  }
-
-  async function playAudio() {
-    if (!isPlaying && queue.length > 0) {
-      isPlaying = true;
-      var text = queue.shift();
-      if (!text) text = '연결이 잠시 끊겼어요. 다시 한 번 말해줄래요?';
-      updateGuidePrompt(text);
       if (naturalVoiceEnabled) {
         const response = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
@@ -223,28 +216,40 @@ const Home = React.forwardRef((props, ref) => {
         });
         const blob = await response.blob();
         const url = URL.createObjectURL(blob);
-        audio.current = new Audio(url);
-        audio.current.play();
-        audio.current.onended = onTTSEnd;
+        audioCache[index] = new Audio(url);
       } else {
-        const audio = new Audio(`https://playentry.org/api/expansionBlock/tts/read.mp3?text=${encodeURIComponent(text)}&speaker=dinna`);
-        audio.play();
-        audio.onended = onTTSEnd;
+        audioCache[index] = new Audio(`https://playentry.org/api/expansionBlock/tts/read.mp3?text=${encodeURIComponent(text)}&speaker=dinna`);
+      }
+      playAudio();
+      updateGuidePrompt('말하는 중...');
+    }
+  }
+
+  async function playAudio() {
+    if (!isPlaying && queue.length > 0) {
+      if (audioCache[audioIndex]) {
+        audioCache[audioIndex].play();
+        audioCache[audioIndex].onended = onTTSEnd;
+        isPlaying = true;
       }
     }
   }
 
   function onTTSEnd() {
-    isPlaying = false;
+    var text = queue.shift();
     if (queue.length > 0) {
+      audioIndex++;
+      isPlaying = false;
       playAudio();
     } else {
+      audioIndex = 0;
+      isPlaying = false;
       STT.current.startListening()
     }
   }
 
   function startNewConversation() {
-    setMessages([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly." }]);
+    setMessages([{ role: "system", content: "You're voice assistant. As possible you must answer simply and friendly. You can fix some typos of user input based on context." }]);
     STT.current.startListening();
   }
 
