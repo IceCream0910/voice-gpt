@@ -80,7 +80,7 @@ const Home = React.forwardRef((props, ref) => {
       fetch("https://api.openai.com/v1/chat/completions", {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -154,7 +154,7 @@ const Home = React.forwardRef((props, ref) => {
         //GPT3.5
         method: "POST",
         headers: {
-          Authorization: `${freeGptEnabled ? "Bearer pk-this-is-a-real-free-pool-token-for-everyone" : `Bearer ${process.env.OPENAI_API_KEY}`}`,
+          Authorization: `${freeGptEnabled ? "Bearer pk-this-is-a-real-free-pool-token-for-everyone" : `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -248,7 +248,7 @@ const Home = React.forwardRef((props, ref) => {
         const response = await fetch('https://api.openai.com/v1/audio/speech', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+            'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
